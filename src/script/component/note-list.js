@@ -1,8 +1,10 @@
-import notes from "./../data/local/notes.js";
+import NotesAPI from "../data/api/api.js";
+import "./delete-note-button.js";
 
 class NoteList extends HTMLElement {
   _temp_html = "";
   _hide = "";
+  _notes = "";
 
   constructor() {
     super();
@@ -34,10 +36,28 @@ class NoteList extends HTMLElement {
       .replace(/\./g, ":"); // Ubah "." jadi ":"
   }
 
-  updateStyle() {
-    this._html = "";
+  async getData() {
+    try {
+      const notesData = await NotesAPI.getDataNonArchive();
+      return notesData;
+    } catch (error) {
+      console.error(error);
+    }
+  }
 
-    notes.forEach((note) => {
+  deleteData(id) {
+    NotesAPI.getDeleteData(id)
+      .then((response) => {
+        alert(response.message);
+        this.render();
+      })
+      .catch((err) => alert(err));
+  }
+
+  async updateStyle() {
+    this._html = "";
+    this._notes = await this.getData();
+    this._notes.forEach((note) => {
       this._html += `
             <section id="${
               note.id
@@ -55,6 +75,7 @@ class NoteList extends HTMLElement {
                         ? '<i class="fs-5">📩</i>'
                         : '<i class="fs-5">✉️</i>'
                     }
+                    <delete-note-button></delete-note-button>
                 </section>
             </section>
         `;
@@ -64,23 +85,24 @@ class NoteList extends HTMLElement {
           ${this._html}
       </section>
     `;
+    // console.log(this._temp_html);
   }
 
-  updateOrAddData(title, note) {
-    notes.push({
-      id: `notes-${Date.now()}`,
-      title: title,
-      body: note,
-      createdAt: new Date().toISOString(),
-      archived: false,
-    });
-
-    this.render();
+  updateOrAddData(title, note_receive) {
+    NotesAPI.getAddData({
+      title: title.toString(),
+      body: note_receive.toString(),
+    })
+      .then(() => this.render())
+      .catch((err) => alert(err));
   }
 
   render() {
-    this.updateStyle();
-    this.innerHTML = this._temp_html;
+    this.updateStyle()
+      .then(() => {
+        this.innerHTML = this._temp_html;
+      })
+      .catch((err) => console.error(err));
   }
 
   attributeChangedCallback(name_attribute, oldValue, newValue) {
